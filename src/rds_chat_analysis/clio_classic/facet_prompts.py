@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict
+from typing import Literal, Sequence, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import (
@@ -90,34 +90,19 @@ class MessageDict(TypedDict):
     content: str
 
 
-def _format_conversation(conversation: list[MessageDict]) -> str:
+def _format_conversation(conversation: Sequence[MessageDict]) -> str:
     return "\n".join(f"{msg['role'].upper()}: {msg['content']}" for msg in conversation)
 
 
 def format_facet_extraction_prompt(
-    conversation: list[MessageDict] | str,
+    conversation: Sequence[MessageDict] | str,
     question: str,
     prefill: str = "",
     include_examples_section: bool = True,
 ) -> list[BaseMessage]:
-    """
-    Formats the FACET_EXTRACTION_PROMPT with the provided conversation, question, and prefill.
-
-    Args:
-        conversation (str): The conversation text.
-        question (str): The question to be answered.
-        prefill (str): The prefilled answer to the question.
-        include_examples_section (bool): Whether to include the examples section in the prompt.
-
-    Returns:
-        ChatPromptTemplate: The formatted prompt ready for use.
-    """
-    if isinstance(conversation, list):
-        conversation = _format_conversation(conversation)
     if not isinstance(conversation, str):
-        raise ValueError(
-            "Conversation must be a string or a list of dictionaries with role: str, content: str."
-        )
+        conversation = _format_conversation(conversation)
+
     return FACET_EXTRACTION_PROMPT.format_messages(
         conversation=conversation,
         question=question,

@@ -7,15 +7,22 @@ authors = [{ name = "Eelco van der Wel", email = "eelco@openmined.org" }]
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=3.6.0",
+    "hdbscan>=0.8.40",
     "ipykernel>=6.29.5",
     "jupyter>=1.1.1",
     "langchain>=0.3.25",
+    "langchain-huggingface>=0.2.0",
     "langchain-openai>=0.3.19",
+    "lingua-language-detector>=2.1.1",
     "numpy>=2.2.6",
-    "pandas>=2.2.3",
+    "plotly>=6.1.2",
+    "psycopg[binary,pool]>=3.2.9",
     "python-dotenv>=1.1.0",
     "rich>=14.0.0",
     "syft-rds>=0.1.2",
+    "torch>=2.7.0",
+    # "umap-learn>=0.5.7",
+    "langchain-ollama==0.3.3",
 ]
 
 

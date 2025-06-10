@@ -198,3 +198,5 @@ cython_debug/
 /data
 /experimental
 /.rds
+embeddings/
+.server/

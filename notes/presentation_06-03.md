@@ -4,7 +4,6 @@
 Create a pipeline to do privacy-preserving chat log analysis over syft-RDS.
 
 - Initial demo: WildChat dataset
-- Deploment with external partner (Project Beach)
 
 ## References
 
