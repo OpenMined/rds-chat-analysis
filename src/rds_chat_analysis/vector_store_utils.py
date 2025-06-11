@@ -2,6 +2,7 @@ import itertools
 import json
 from collections.abc import Callable
 from pathlib import Path
+from textwrap import dedent
 from typing import Iterable
 
 import psycopg
@@ -235,7 +236,7 @@ def build_vector_store_query(
         ORDER BY distance ASC
         LIMIT %s;
     """
-
+    query = dedent(query).strip()
     return query, params
 
 

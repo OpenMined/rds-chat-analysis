@@ -1,4 +1,5 @@
 import psycopg
+from psycopg.rows import dict_row
 
 DEFAULT_VECTOR_INDEX_SETTINGS = {
     "index_type": "hnsw",
@@ -161,4 +162,40 @@ def setup_indices(
         overwrite_existing=overwrite_existing,
         maintenance_mem=pg_maintenance_mem,
         parallel_workers=pg_parallel_workers,
+    )
+
+
+def get_full_log(db_conn: psycopg.Connection, log_id: str):
+    with db_conn.cursor() as cursor:
+        cursor.execute(
+            """SELECT * FROM log_embeddings WHERE metadata->>'log_id' = %s ORDER BY (metadata->>'message_idx')::int ASC;""",
+            (log_id,),
+        )
+        results = cursor.fetchall()
+    return results
+
+
+def connect_to_db(config: dict) -> psycopg.Connection:
+    db_config = config["db"]
+
+    db_conn_settings = {
+        "host": db_config["postgres_host"],
+        "port": db_config["postgres_port"],
+        "dbname": db_config["postgres_db"],
+        "user": db_config["postgres_user"],
+        "password": db_config["postgres_password"],
+        "sslmode": db_config.get("postgres_sslmode", "require"),
+    }
+
+    keepalive_kwargs = {
+        "keepalives": 1,
+        "keepalives_idle": 60,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+
+    return psycopg.connect(
+        **db_conn_settings,
+        row_factory=dict_row,
+        **keepalive_kwargs,
     )

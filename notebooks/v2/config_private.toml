@@ -1,0 +1,27 @@
+[embedder]
+provider = "huggingface"
+model = "Alibaba-NLP/gte-multilingual-base"
+device = "auto"
+
+[embedder.kwargs]
+model_kwargs = { "trust_remote_code" = true }
+encode_kwargs = { "normalize_embeddings" = false }
+
+[llm]
+provider = "ollama"
+model = "gemma3:1b-it-qat"
+
+[db]
+postgres_host = "localhost"
+postgres_port = 5432
+postgres_server = "syft-pg-private"
+postgres_db = "syft-pg-private"
+postgres_user = "admin"
+postgres_password = "changethis"
+postgres_sslmode = "disable"
+
+[db.keepalive_settings]
+keepalives = 1
+keepalives_idle = 60
+keepalives_interval = 10
+keepalives_count = 5
