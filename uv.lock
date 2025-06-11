@@ -671,7 +671,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "0.32.4"
+version = "0.32.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -683,9 +683,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/c8/4f7d270285c46324fd66f62159eb16739aa5696f422dba57678a8c6b78e9/huggingface_hub-0.32.4.tar.gz", hash = "sha256:f61d45cd338736f59fb0e97550b74c24ee771bcc92c05ae0766b9116abe720be", size = 424494 }
+sdist = { url = "https://files.pythonhosted.org/packages/8f/fb/7fcbafabdf470ffb5457b756cc1f659b4e88a9ff37c108e6c7a5ab5e781e/huggingface_hub-0.32.6.tar.gz", hash = "sha256:8e960f23dc57519c6c2a0bbc7e9bc030eaa14e7f2d61f8e68fd3d025dabed2fa", size = 424961 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/8b/222140f3cfb6f17b0dd8c4b9a0b36bd4ebefe9fb0098ba35d6960abcda0f/huggingface_hub-0.32.4-py3-none-any.whl", hash = "sha256:37abf8826b38d971f60d3625229221c36e53fe58060286db9baf619cfbf39767", size = 512101 },
+    { url = "https://files.pythonhosted.org/packages/c5/42/dd58e603c5b069c4e4759c7c44e4f5ccdc2ce02185848232775f5d6d5d50/huggingface_hub-0.32.6-py3-none-any.whl", hash = "sha256:32cde9558c965477556edca72352621def7fbc42e167aaf33f4cdb9af65bb28b", size = 512800 },
 ]
 
 [[package]]
@@ -1170,7 +1170,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "0.3.64"
+version = "0.3.65"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -1181,25 +1181,23 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/40/89a80157f495d4adc9e5e770171806e3231600647f4ca0e89bdf743702ff/langchain_core-0.3.64.tar.gz", hash = "sha256:71b51bf77003eb57e74b8fa2a84ac380e24aa7357f173b51645c5834b9fc0d62", size = 558483 }
+sdist = { url = "https://files.pythonhosted.org/packages/04/8a/d08c83195d1ef26c42728412ab92ab08211893906b283abce65775e21327/langchain_core-0.3.65.tar.gz", hash = "sha256:54b5e0c8d9bb405415c3211da508ef9cfe0acbe5b490d1b4a15664408ee82d9b", size = 558557 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/43/94b486eeb778443887e4eb76326e704ee0c6244f5fab6a46686e09968e9a/langchain_core-0.3.64-py3-none-any.whl", hash = "sha256:e844c425329d450cb3010001d86b61fd59a6a17691641109bae39322c85e27dd", size = 438113 },
+    { url = "https://files.pythonhosted.org/packages/54/f0/31db18b7b8213266aed926ce89b5bdd84ccde7ee2edf4cab14e3dd2bfcf1/langchain_core-0.3.65-py3-none-any.whl", hash = "sha256:80e8faf6e9f331f8ef728f3fe793549f1d3fb244fcf9e1bdcecab6a6f4669394", size = 438052 },
 ]
 
 [[package]]
 name = "langchain-huggingface"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "langchain-core" },
-    { name = "sentence-transformers" },
     { name = "tokenizers" },
-    { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/a9/37f23321b776fe40a6b15a6476bc8537d255581793a3accc001725edd8bd/langchain_huggingface-0.2.0.tar.gz", hash = "sha256:609acbfbade749bffa22acffd46d9e924a58e96cc59215d0562b8e9215b210f5", size = 24799 }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/72/5f32c8e6db4d94c00252318aa7910102134b4bd6b2af1b13f2042f7f95f6/langchain_huggingface-0.3.0.tar.gz", hash = "sha256:d1cf93fb4d4eafc8b44edcd5fba904b27cbd3fda6cdef0e2321fbcf4efcda822", size = 24823 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/76/eb08f7b87f3377ced3800b2896841ccdcde3e246f46523946ecf092447e6/langchain_huggingface-0.2.0-py3-none-any.whl", hash = "sha256:eed1fdfe51d16d761499fa754491a1a4dcb61798c1e5516335071d1dad852a41", size = 27329 },
+    { url = "https://files.pythonhosted.org/packages/c1/da/7446c2eeacd420cb975ceb49c6feca7be40cf8ed3686a128ca78410c148f/langchain_huggingface-0.3.0-py3-none-any.whl", hash = "sha256:aab85d57e649c805d2f2a9f8d72d87b5d12c45dd4831309ac9c37753ddb237ed", size = 27359 },
 ]
 
 [[package]]
@@ -1217,16 +1215,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "0.3.21"
+version = "0.3.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9c/2b/92f2fe18265bea38c456ea75cb6a38ba7d0f4d1bccb4220de616771b26a1/langchain_openai-0.3.21.tar.gz", hash = "sha256:470126f54b754b55a421bd0ffcb53671355700b42f0689a80187d53df20c6759", size = 545107 }
+sdist = { url = "https://files.pythonhosted.org/packages/32/88/28a78b1f15dbabc32e3b892c3c71bdcb4a48a501e7d604f5d42fb365a191/langchain_openai-0.3.22.tar.gz", hash = "sha256:42802b1c64824edd4a0e5093bdb791e4323cf1d281594cf58194ad714db6cd49", size = 647768 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/c0/bded8320fb0bbaeb3383fa8a45c287b95e153566f4ba2b749a67074090e5/langchain_openai-0.3.21-py3-none-any.whl", hash = "sha256:9d1f447af2e15d5d6b7e0c5552052e08d1dd4aa1c9b537bcde47534792a7f244", size = 65211 },
+    { url = "https://files.pythonhosted.org/packages/ec/dd/effc847fd55b808d04f7e453d1e4bd3dc813708113ee283055e77be6d651/langchain_openai-0.3.22-py3-none-any.whl", hash = "sha256:945d3b18f2293504d0b81971a9017fc1294571cce4204c18aba3cfbfc43d24c6", size = 65295 },
 ]
 
 [[package]]
@@ -1797,7 +1795,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.85.0"
+version = "1.86.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1809,9 +1807,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/3c/1143dc0a865d06482454fddb35d739c9260b18d721f01287f79cc53a315f/openai-1.85.0.tar.gz", hash = "sha256:6ba76e4ebc5725f71f2f6126c7cb5169ca8de60dd5aa61f350f9448ad162c913", size = 468207 }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/7a/9ad4a61f1502f0e59d8c27fb629e28a63259a44d8d31cd2314e1534a2d9f/openai-1.86.0.tar.gz", hash = "sha256:c64d5b788359a8fdf69bd605ae804ce41c1ce2e78b8dd93e2542e0ee267f1e4b", size = 468272 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/73/b4427c7873f4f778ec7a6d2b1724fd3aadc85719a12e324615b9c2bc614f/openai-1.85.0-py3-none-any.whl", hash = "sha256:7dc3e839cb8bb8747979a90c63ad4cb25a8e0cbec17b53eec009532c9965cecf", size = 730229 },
+    { url = "https://files.pythonhosted.org/packages/58/c1/dfb16b3432810fc9758564f9d1a4dbce6b93b7fb763ba57530c7fc48316d/openai-1.86.0-py3-none-any.whl", hash = "sha256:c8889c39410621fe955c230cc4c21bfe36ec887f4e60a957de05f507d7e1f349", size = 730296 },
 ]
 
 [[package]]
@@ -2484,6 +2482,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "python-dotenv" },
     { name = "rich" },
+    { name = "sentence-transformers" },
     { name = "syft-rds" },
     { name = "torch" },
 ]
@@ -2510,6 +2509,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.9" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "rich", specifier = ">=14.0.0" },
+    { name = "sentence-transformers", specifier = ">=4.1.0" },
     { name = "syft-rds", git = "https://github.com/OpenMined/rds.git?rev=main" },
     { name = "torch", specifier = ">=2.7.0" },
 ]
@@ -2920,7 +2920,7 @@ wheels = [
 [[package]]
 name = "syft-rds"
 version = "0.1.3"
-source = { git = "https://github.com/OpenMined/rds.git?rev=main#8b58f894f68119e692ce562f052902a114752605" }
+source = { git = "https://github.com/OpenMined/rds.git?rev=main#7a090ac03a9a7b0cc1c9d4831b901a0734120506" }
 dependencies = [
     { name = "ipython" },
     { name = "jinja2" },

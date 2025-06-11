@@ -23,6 +23,7 @@ dependencies = [
     "torch>=2.7.0",
     # "umap-learn>=0.5.7",
     "langchain-ollama==0.3.3",
+    "sentence-transformers>=4.1.0",
 ]
 
 

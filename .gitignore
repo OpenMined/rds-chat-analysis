@@ -200,3 +200,5 @@ cython_debug/
 /.rds
 embeddings/
 .server/
+config_*.toml
+!config_*.example.toml
