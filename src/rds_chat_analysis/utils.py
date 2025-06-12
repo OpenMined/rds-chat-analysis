@@ -2,10 +2,15 @@ import tomllib
 from pathlib import Path
 
 from langchain.chat_models.base import BaseChatModel, init_chat_model
+from langchain.embeddings import CacheBackedEmbeddings
 from langchain.embeddings.base import Embeddings, init_embeddings
+from langchain.storage import LocalFileStore
 
 
-def load_config(config_path: Path) -> dict:
+def load_config(config_path: str | Path) -> dict:
+    config_path = Path(config_path)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
     with config_path.open("rb") as f:
         return tomllib.load(f)
 
@@ -26,7 +31,9 @@ def load_llm_from_config(config: dict) -> BaseChatModel:
     )
 
 
-def load_embedder_from_config(config: dict) -> Embeddings:
+def load_embedder_from_config(
+    config: dict, cache_dir: str | Path | None = None
+) -> Embeddings:
     if "embedder" not in config:
         raise ValueError("Config must contain 'embedder' key.")
 
@@ -45,8 +52,17 @@ def load_embedder_from_config(config: dict) -> Embeddings:
         model_kwargs["device"] = device
     embedder_kwargs["model_kwargs"] = model_kwargs
 
-    return init_embeddings(
+    embedder = init_embeddings(
         model=embedder_config["model"],
         provider=embedder_config.get("provider", None),
         **embedder_kwargs,
     )
+
+    if cache_dir:
+        file_store = LocalFileStore(root_path=Path(cache_dir))
+        return CacheBackedEmbeddings.from_bytes_store(
+            embedder,
+            file_store,
+        )
+    else:
+        return embedder

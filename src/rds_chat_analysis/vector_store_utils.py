@@ -1,6 +1,5 @@
 import itertools
 import json
-from collections.abc import Callable
 from pathlib import Path
 from textwrap import dedent
 from typing import Iterable
@@ -9,58 +8,58 @@ import psycopg
 import pyarrow
 import pyarrow.parquet as pq
 from langchain_core.embeddings import Embeddings
+from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 from tqdm import tqdm
 
 
-def _write_to_parquet(rows: list[dict], filepath: Path):
-    table = pyarrow.Table.from_pylist(
-        rows,
-        schema=pyarrow.schema(
-            [
-                ("id", pyarrow.string()),
-                ("text", pyarrow.string()),
-                ("metadata", pyarrow.string()),
-                ("embedding", pyarrow.list_(pyarrow.float32())),
-            ]
-        ),
-    )
+def _write_to_parquet(rows: list[dict], filepath: Path) -> Path:
+    table = pyarrow.Table.from_pylist(rows)
     pq.write_table(table, filepath, compression="zstd")
+    return filepath
 
 
 def embed_to_parquet(
-    logs: Iterable[dict],
+    logs: list[list[dict]],
     embedder: Embeddings,
-    preprocess_fn: Callable[[dict], list[dict]],
     output_dir: Path | str = "./embeddings/",
-    rows_per_parquet_file: int = 1_000_000,
+    rows_per_parquet_file: int = 250_000,
     embedder_batch_size: int = 32,
-    num_logs: int = 0,
+    num_logs: int | None = None,
 ):
+    """
+    Expects logs as a list of lists of dicts, where each inner list is a preprocessed log (list of messages).
+    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     file_idx = 0
     buffer = []
+    saved_files = []
+
+    if num_logs is None and hasattr(logs, "__len__"):
+        num_logs = len(logs)
 
     with tqdm(total=num_logs, desc="Embedding logs") as pbar:
         for logs_batch in itertools.batched(logs, embedder_batch_size * 10):
-            preprocessed_logs = [preprocess_fn(log) for log in logs_batch]
-            preprocessed_messages = [msg for log in preprocessed_logs for msg in log]
+            preprocessed_messages = [msg for log in logs_batch for msg in log]
 
             texts = [msg["text"] for msg in preprocessed_messages]
             embeddings = []
             for batch_to_embed in itertools.batched(texts, embedder_batch_size):
-                embedded_batch = embedder.embed_query(batch_to_embed)
+                embedded_batch = embedder.embed_documents(batch_to_embed)
                 embeddings.extend(embedded_batch)
 
             for msg, embedding in zip(preprocessed_messages, embeddings):
                 msg["embedding"] = embedding
-                msg["metadata"] = json.dumps(msg["metadata"])
+                # msg["metadata"] = json.dumps(msg["metadata"])
 
             buffer.extend(preprocessed_messages)
             if len(buffer) >= rows_per_parquet_file:
-                _write_to_parquet(buffer, output_dir / f"embeddings_{file_idx}.parquet")
+                fp = _write_to_parquet(
+                    buffer, output_dir / f"embeddings_{file_idx}.parquet"
+                )
+                saved_files.append(fp)
                 buffer.clear()
                 file_idx += 1
 
@@ -68,7 +67,10 @@ def embed_to_parquet(
 
     # Write any remaining rows to a final Parquet file
     if buffer:
-        _write_to_parquet(buffer, output_dir / f"embeddings_{file_idx}.parquet")
+        fp = _write_to_parquet(buffer, output_dir / f"embeddings_{file_idx}.parquet")
+        saved_files.append(fp)
+
+    print(f"Saved {len(saved_files)} Parquet files to {output_dir}")
 
 
 def load_embeddings_from_file(
@@ -116,8 +118,20 @@ def count_embeddings_from_dir(
 
 
 def _add_batch_to_db(conn: psycopg.Connection, table_name: str, data_to_insert: list):
-    if not len(data_to_insert):
+    if not data_to_insert:
         return
+
+    processed_data = []
+    for row in data_to_insert:
+        id_val, text, metadata, embedding = row
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except Exception:
+                raise ValueError(f"Invalid JSON string in metadata: {metadata}")
+        if not isinstance(metadata, dict):
+            raise TypeError(f"Metadata must be dict, got {type(metadata)}: {metadata}")
+        processed_data.append((id_val, text, Jsonb(metadata), embedding))
 
     insert_query = f"""
         INSERT INTO "{table_name}" (id, text, metadata, embedding)
@@ -129,7 +143,7 @@ def _add_batch_to_db(conn: psycopg.Connection, table_name: str, data_to_insert: 
     """
 
     with conn.cursor() as cur:
-        cur.executemany(insert_query, data_to_insert)
+        cur.executemany(insert_query, processed_data)
     conn.commit()
 
 
