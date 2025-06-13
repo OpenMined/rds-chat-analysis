@@ -1,18 +1,102 @@
 import json
 import tempfile
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 from uuid import UUID
 
 import rich
+from IPython.display import HTML, display
+from pydantic import BaseModel
 from rich.prompt import Confirm, Prompt
 from syft_core import Client as SyftBoxClient
 from syft_event import SyftEvents
 from syft_rds import init_session as _rds_init_session
 from syft_rds.client.rds_client import RDSClient
+from syft_rds.models.html_format import create_html_repr
 from syft_rds.models.models import Job, JobStatus
 
 from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
+
+
+class JobOutput(BaseModel):
+    job: Job
+    execution_output_dir: Path
+
+    @property
+    def logs_dir(self) -> Path:
+        return self.execution_output_dir / "logs"
+
+    @property
+    def output_dir(self) -> Path:
+        return self.execution_output_dir / "output"
+
+    @property
+    def stderr_file(self) -> Path:
+        return self.logs_dir / "stderr.log"
+
+    @property
+    def stdout_file(self) -> Path:
+        return self.logs_dir / "stdout.log"
+
+    @property
+    def stderr(self) -> str | None:
+        if self.stderr_file.exists():
+            return self.stderr_file.read_text()
+        return None
+
+    @property
+    def stdout(self) -> str | None:
+        if self.stdout_file.exists():
+            return self.stdout_file.read_text()
+        return None
+
+    @property
+    def log_files(self) -> list[Path]:
+        return list(self.logs_dir.glob("*"))
+
+    @property
+    def output_files(self) -> list[Path]:
+        return list(self.output_dir.glob("*"))
+
+    @property
+    def outputs(self) -> dict[str, Any]:
+        output_files = list(self.output_dir.glob("*.json"))
+        outputs = {}
+        for file in output_files:
+            if file.name.endswith(".json"):
+                with open(file, "r") as f:
+                    outputs[file.name] = json.load(f)
+            elif file.name.endswith(".parquet"):
+                import pandas as pd
+
+                outputs[file.name] = pd.read_parquet(file)
+            elif file.name.endswith(".csv"):
+                import pandas as pd
+
+                outputs[file.name] = pd.read_csv(file)
+            elif file.name.endswith(".txt"):
+                with open(file, "r") as f:
+                    outputs[file.name] = f.read()
+            else:
+                rich.print(
+                    f":warning: Unsupported file type {file.name}. Please check this file manually."
+                )
+        return outputs
+
+    def describe(self):
+        display_paths = ["output_dir"]
+        if self.stdout_file.exists():
+            display_paths.append("stdout_file")
+        if self.stderr_file.exists():
+            display_paths.append("stderr_file")
+
+        html_repr = create_html_repr(
+            obj=self,
+            fields=["output_dir", "logs_dir"],
+            display_paths=display_paths,
+        )
+
+        display(HTML(html_repr))
 
 
 def init_session(
@@ -131,23 +215,27 @@ class RDSChatAnalysisClient(RDSClient):
 
     def get_job_result(
         self, job: str | UUID | Job, output_filename: str = "output/result.json"
-    ):
+    ) -> JobOutput:
         job = self._get_job(job)
 
         if job.status != JobStatus.shared:
             raise ValueError(
-                f"Job {job.uid} has no results yet. Current status: {job.status.name}."
+                f"Job {job.uid} has no shared results yet. Current status: {job.status.name}."
             )
 
-        output_file = job.output_path / output_filename
-        if not output_file.exists():
+        return JobOutput(execution_output_dir=job.output_path, job=job)
+
+    def get_execution_result(self, job: str | UUID | Job) -> JobOutput:
+        job_output_folder: Path = (
+            self.config.runner_config.job_output_folder / job.uid.hex
+        )
+
+        if not job_output_folder.exists():
             raise FileNotFoundError(
-                f"Output file {output_file} does not exist. Please contact the administrator."
+                f"Output folder {job_output_folder} does not exist."
             )
 
-        with open(output_file, "r") as f:
-            result = json.load(f)
-        return result
+        return JobOutput(execution_output_dir=job_output_folder, job=job)
 
     def _review_job_auto_reject_checks(self, job) -> tuple[bool, str | None]:
         """

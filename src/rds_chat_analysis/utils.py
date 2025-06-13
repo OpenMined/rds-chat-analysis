@@ -22,12 +22,12 @@ def load_llm_from_config(config: dict) -> BaseChatModel:
     llm_config = config["llm"]
     model = llm_config["model"]
     provider = llm_config.get("provider", None)
-    model_kwargs = dict(llm_config.get("kwargs", {}))
+    llm_kwargs = dict(llm_config.get("kwargs", {}))
 
     return init_chat_model(
         model=model,
         model_provider=provider,
-        **model_kwargs,
+        **llm_kwargs,
     )
 
 
@@ -47,6 +47,7 @@ def load_embedder_from_config(
         print(f"CUDA available: {cuda_available}, embedding device set to: {device}")
 
     embedder_kwargs = dict(embedder_config.get("kwargs", {}))
+    # For Hugginface models, add device to model_kwargs
     model_kwargs = dict(embedder_kwargs.get("model_kwargs", {}))
     if device is not None:
         model_kwargs["device"] = device
