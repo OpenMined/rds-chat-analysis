@@ -7,7 +7,6 @@ from uuid import UUID
 import rich
 from IPython.display import HTML, display
 from pydantic import BaseModel
-from rich.prompt import Confirm, Prompt
 from syft_core import Client as SyftBoxClient
 from syft_event import SyftEvents
 from syft_rds import init_session as _rds_init_session
@@ -237,63 +236,59 @@ class RDSChatAnalysisClient(RDSClient):
 
         return JobOutput(execution_output_dir=job_output_folder, job=job)
 
-    def _review_job_auto_reject_checks(self, job) -> tuple[bool, str | None]:
+    def _review_job_auto_reject_checks(self, job) -> tuple[bool, str]:
         """
-        Run auto-reject checks for a job. Returns (failed, reason) where failed is True if any check failed.
+        Run auto-reject checks for a job. Returns (failed, output) where failed is True if any check failed.
+        The output is a string containing all output messages.
         """
         local_code_dir = job.user_code.local_dir
-        auto_reject_reason = None
+        output_lines = []
+        failed = False
 
-        rich.print(":mag: Running auto-reject checks on the job...")
+        output_lines.append(":mag: Running auto-reject checks on the job...")
         if not local_code_dir.is_dir():
-            rich.print(f":x: Local code directory {local_code_dir} does not exist.")
-            auto_reject_reason = (
-                f"Local code directory {local_code_dir} does not exist."
+            output_lines.append(
+                f":x: Local code directory {local_code_dir} does not exist."
             )
+            failed = True
         else:
-            rich.print(":white_check_mark: Local code directory exists.")
+            output_lines.append(":white_check_mark: Local code directory exists.")
 
         code_files = list(local_code_dir.iterdir())
         if len(code_files) != 2:
-            rich.print(
+            output_lines.append(
                 f":x: Expected 2 files in the code directory, found {len(code_files)}."
             )
-            if not auto_reject_reason:
-                auto_reject_reason = (
-                    f"Expected 2 files in the code directory, found {len(code_files)}."
-                )
+            failed = True
         else:
-            rich.print(":white_check_mark: Found 2 files in the code directory.")
+            output_lines.append(
+                ":white_check_mark: Found 2 files in the code directory."
+            )
 
         if "job_config.json" not in [f.name for f in code_files]:
-            rich.print(":x: job_config.json file is missing in the code directory.")
-            if not auto_reject_reason:
-                auto_reject_reason = (
-                    "job_config.json file is missing in the code directory."
-                )
+            output_lines.append(
+                ":x: job_config.json file is missing in the code directory."
+            )
+            failed = True
         else:
-            rich.print(":white_check_mark: job_config.json found.")
+            output_lines.append(":white_check_mark: job_config.json found.")
 
         if "main.py" not in [f.name for f in code_files]:
-            rich.print(":x: main.py file is missing in the code directory.")
-            if not auto_reject_reason:
-                auto_reject_reason = "main.py file is missing in the code directory."
+            output_lines.append(":x: main.py file is missing in the code directory.")
+            failed = True
         else:
-            rich.print(":white_check_mark: main.py found.")
+            output_lines.append(":white_check_mark: main.py found.")
 
         code_str = (local_code_dir / "main.py").read_text()
         from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
 
         if not code_str.strip() == CHAT_ANALYSIS_CODE_TEMPLATE.strip():
-            rich.print(":x: Job contains custom or modified code.")
-            if not auto_reject_reason:
-                auto_reject_reason = "Job contains custom or modified code."
+            output_lines.append(":x: Job contains custom or modified code.")
+            failed = True
         else:
-            rich.print(":white_check_mark: main.py matches template.")
+            output_lines.append(":white_check_mark: main.py matches template.")
 
-        if auto_reject_reason is not None:
-            rich.print(f":x: Auto-reject checks failed. Reason: {auto_reject_reason}")
-        return (auto_reject_reason is not None, auto_reject_reason)
+        return (failed, "\n".join(output_lines))
 
     def review_job(self, job: str | UUID | Job) -> None:
         job = self._get_job(job)
@@ -303,34 +298,20 @@ class RDSChatAnalysisClient(RDSClient):
             )
             return
 
-        checks_failed, auto_reject_reason = self._review_job_auto_reject_checks(job)
+        auto_review_failed, auto_review_str = self._review_job_auto_reject_checks(job)
         local_code_dir = job.user_code.local_dir
-        rich.print("Job config:")
-        with open(local_code_dir / "job_config.json", "r") as f:
-            job_config = json.load(f)
-            rich.print_json(data=job_config, highlight=False, indent=2)
 
-        confirm_msg = "Do you want to reject this job?"
-        job_is_denied = Confirm.ask(
-            confirm_msg,
-            default=checks_failed,
-            show_default=True,
-        )
+        job_config_path = local_code_dir / "job_config.json"
+        if job_config_path.exists():
+            rich.print(":mag: Job parameters:")
+            rich.print_json(json=job_config_path.read_text(), indent=2, highlight=False)
 
-        if job_is_denied:
-            reason = Prompt.ask(
-                "Please provide a reason for denying this job.",
-                default=auto_reject_reason or "No reason provided",
-                show_default=True,
-            )
-            rich.print(f":x: Job {job.uid} denied.")
-            self.jobs.reject(
-                job,
-                reason=reason,
-            )
+        review_output_text = auto_review_str
+        if auto_review_failed:
+            review_output_text += "\n\n:warning: One or more auto-reject checks failed. Recommendation: Reject"
         else:
-            rich.print(f":white_check_mark: Job {job.uid} approved.")
-            rich.print(
-                "You can now run the job on the private data using: `client.run_private(job)`\n"
-                "After the job is completed, you can share the results with the user using: `client.jobs.share_results(job)`"
-            )
+            review_output_text += "\n\nAll checks passed, this job is safe to execute if you agree with the job parameters."
+
+        review_output_text += "\n\nTo reject the job, run client.jobs.reject(job, reason='Your reason here').\nTo run the job on the private data, run client.run_private(job)."
+
+        rich.print(review_output_text)

@@ -197,9 +197,10 @@ cython_debug/
 .env.*
 /data
 /experimental
-/.rds
+.rds/
 embedding*/
 !src/**/embedding*/
 .server/
 config_*.toml
 !config_*.example.toml
+staging/
