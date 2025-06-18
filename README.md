@@ -17,6 +17,19 @@ source .venv/bin/activate
 ollama pull gemma3:1b-it-qat
 ```
 
+##
+
+Clone syftbox and run:
+
+```
+just run-minio
+just run-server -f config/server.dev.yaml
+
+# launch DO and DS
+just run-client-simple alice@rds.openmined.org
+just run-client-simple bob@rds.openmined.org
+```
+
 ## Running the notebooks
 
 the /notebooks folder have two flows:
@@ -30,13 +43,13 @@ To set up and start the RDS server:
 cd notebooks/v2
 
 # Start the RDS server
-export RDS_DO_CONFIG=./.rds/wildchat/do_config.json
-export RDS_DS_CONFIG=./.rds/wildchat/ds_config.json
+export RDS_DO_CONFIG=~/.syftbox/clients/alice@rds.openmined.org/config.json
+export RDS_DS_CONFIG=~/.syftbox/clients/bob@rds.openmined.org/config.json
 
 # Create a syftbox config for the data owner and data scientist
 # NOTE only needed if you do not already have a data owner and data scientist running on a real syftbox server.
-python -m syft_rds.cli init-test-datasite --email data_owner@test.openmined.org --data-dir ./.rds/wildchat/ --config-path ${RDS_DO_CONFIG}
-python -m syft_rds.cli init-test-datasite --email data_scientist@test.openmined.org --data-dir ./.rds/wildchat/ --config-path ${RDS_DS_CONFIG}
+# python -m syft_rds.cli init-test-datasite --email data_owner@test.openmined.org --data-dir ./.rds/wildchat/ --config-path ${RDS_DO_CONFIG}
+# python -m syft_rds.cli init-test-datasite --email data_scientist@test.openmined.org --data-dir ./.rds/wildchat/ --config-path ${RDS_DS_CONFIG}
 
 # Start the RDS server
 python -m syft_rds.cli server --syftbox-config ${RDS_DO_CONFIG}
