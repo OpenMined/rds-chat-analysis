@@ -27,6 +27,32 @@ PAIRWISE_QA_PROMPT = (
     "Provide only the answer with no other commentary or proper nouns."
 )
 
+CHAT_ANALYSIS_CODE_TEMPLATE = """
+from pathlib import Path
+import os
+from rds_chat_analysis.job_functions import execute_chat_log_analysis
+import json
+
+DATA_DIR = Path(os.environ["DATA_DIR"])
+OUTPUT_DIR = Path(os.environ["OUTPUT_DIR"])
+CODE_DIR = Path(os.environ["CODE_DIR"])
+
+print(f"Data directory: {DATA_DIR}")
+print(f"Output directory: {OUTPUT_DIR}")
+
+job_config = CODE_DIR / "job_config.json"
+with open(job_config, "r") as f:
+    job_config = json.load(f)
+
+result = execute_chat_log_analysis(
+    dataset_dir=DATA_DIR,
+    **job_config,
+)
+
+with open(OUTPUT_DIR / "result.json", "w") as f:
+    json.dump(result, f, indent=2)
+""".strip()
+
 
 def format_conversation(log: List[Dict[str, Any]]) -> str:
     formatted_messages = []
@@ -55,33 +81,6 @@ def pairwise_chat_question_answering(
     return results
 
 
-CHAT_ANALYSIS_CODE_TEMPLATE = """
-from pathlib import Path
-import os
-from rds_chat_analysis.job_functions import execute_chat_log_analysis
-import json
-
-DATA_DIR = Path(os.environ["DATA_DIR"])
-OUTPUT_DIR = Path(os.environ["OUTPUT_DIR"])
-CODE_DIR = Path(os.environ["CODE_DIR"])
-
-print(f"Data directory: {DATA_DIR}")
-print(f"Output directory: {OUTPUT_DIR}")
-
-job_config = CODE_DIR / "job_config.json"
-with open(job_config, "r") as f:
-    job_config = json.load(f)
-
-result = execute_chat_log_analysis(
-    dataset_dir=DATA_DIR,
-    **job_config,
-)
-
-with open(OUTPUT_DIR / "result.json", "w") as f:
-    json.dump(result, f, indent=2)
-""".strip()
-
-
 def execute_chat_log_analysis(
     dataset_dir: Path,
     vector_store_query: str,
@@ -89,7 +88,7 @@ def execute_chat_log_analysis(
     max_vector_store_results: int = 5,
     distance_threshold: float = 0.5,
     filters: dict | None = None,
-    recitation_filter_n: int = 6,
+    recitation_filter_n: int = 8,
 ) -> list[str]:
     """
     A simple chat log analysis pipeline. Steps:

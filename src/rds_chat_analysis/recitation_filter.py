@@ -39,8 +39,7 @@ class RecitationScorer:
     For each n in [n_min, n_max], compute:
         overlap_n = number of candidate n-grams found in reference texts
         total_n   = total number of candidate n-grams
-
-    Then compute:
+        precision_n = overlap_n / total_n
         precision = (sum_n overlap_n) / (sum_n total_n)
     """
 

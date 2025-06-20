@@ -53,9 +53,9 @@ class ProcessedMessage(BaseModel):
             raise ValueError("metadata must be a dictionary")
 
         if "log_id" not in v or not isinstance(v["log_id"], str):
-            raise ValueError("metadata must contain 'log_id' key as a string")
-        # if "role" not in v or not isinstance(v["role"], str):
-        #     raise ValueError("metadata must contain 'role' key as a string")
+            raise ValueError("metadata must contain 'log_id'")
+        if "role" not in v or not isinstance(v["role"], str):
+            raise ValueError("metadata must contain 'role'")
 
         return v
 
