@@ -11,8 +11,8 @@ from syft_core import Client as SyftBoxClient
 from syft_event import SyftEvents
 from syft_rds import init_session as _rds_init_session
 from syft_rds.client.rds_client import RDSClient
-from syft_rds.models.html_format import create_html_repr
-from syft_rds.models.models import Job, JobStatus
+from syft_rds.display_utils.html_format import create_html_repr
+from syft_rds.models import Job, JobStatus
 
 from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
 
@@ -151,8 +151,7 @@ class RDSChatAnalysisClient(RDSClient):
     def submit_job(
         self,
         vector_store_query: str,
-        aggregation_fn: str,
-        aggregation_query: str | None = None,
+        llm_query: str,
         max_vector_store_results: int = 5,
         distance_threshold: float = 0.5,
         filters: dict | None = None,
@@ -161,8 +160,7 @@ class RDSChatAnalysisClient(RDSClient):
         dataset_name = self._infer_dataset_name(dataset_name)
         job_config = {
             "vector_store_query": vector_store_query,
-            "aggregation_fn": aggregation_fn,
-            "aggregation_query": aggregation_query,
+            "llm_query": llm_query,
             "max_vector_store_results": max_vector_store_results,
             "distance_threshold": distance_threshold,
             "filters": filters,
@@ -179,7 +177,7 @@ class RDSChatAnalysisClient(RDSClient):
             with open(job_code_path, "w") as f:
                 f.write(CHAT_ANALYSIS_CODE_TEMPLATE)
 
-            job = self.jobs.submit(
+            job = self.job.submit(
                 user_code_path=temp_dir,
                 dataset_name=dataset_name,
                 entrypoint="main.py",
