@@ -1,7 +1,6 @@
 import itertools
 import json
 from pathlib import Path
-from textwrap import dedent
 from typing import Iterable
 
 import psycopg
@@ -210,70 +209,3 @@ def add_embeddings_to_db_pooled(
                 _add_batch_to_db(conn, table_name, data_to_insert)
 
             pbar.update(len(data_to_insert))
-
-
-def build_vector_store_query(
-    query_embedding: list[float],
-    table_name: str,
-    k: int = 5,
-    distance_threshold: float | None = None,
-    filters: dict | None = None,
-) -> tuple[str, list]:
-    query_embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
-    params = [query_embedding_str]
-
-    # JSONB filters, e.g. metadata @> '{"language": "English"}'
-    # TODO only supports equality filters
-    where_clauses = []
-    if filters:
-        for key, value in filters.items():
-            where_clauses.append("metadata @> %s")
-            params.append(json.dumps({key: value}))
-
-    # Distance threshold
-    # Only supports cosine distance (<=>), because that's what the index is built with
-    if distance_threshold is not None:
-        where_clauses.append("(embedding <=> %s) <= %s")
-        params.append(query_embedding_str)
-        params.append(distance_threshold)
-
-    where_sql = ""
-    if where_clauses:
-        where_sql = "WHERE " + " AND ".join(where_clauses)
-
-    params.append(k)
-
-    query = f"""
-        SELECT id, text, metadata, (embedding <=> %s) AS distance
-        FROM "{table_name}"
-        {where_sql}
-        ORDER BY distance ASC
-        LIMIT %s;
-    """
-    query = dedent(query).strip()
-    return query, params
-
-
-def query_vector_store(
-    conn: psycopg.Connection,
-    embedder,
-    table_name: str,
-    query_text: str,
-    k: int = 5,
-    distance_threshold: float | None = None,
-    filters: dict | None = None,
-) -> list[dict]:
-    query_embedding = embedder.embed_query(query_text)
-    sql, params = build_vector_store_query(
-        query_embedding,
-        table_name,
-        k=k,
-        distance_threshold=distance_threshold,
-        filters=filters,
-    )
-
-    results = []
-    with conn.cursor() as cur:
-        cur.execute(sql, params)
-        results = cur.fetchall()
-    return results

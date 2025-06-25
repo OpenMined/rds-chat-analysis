@@ -234,12 +234,19 @@ class RDSChatAnalysisClient(RDSClient):
 
         return JobOutput(execution_output_dir=job_output_folder, job=job)
 
-    def _review_job_auto_reject_checks(self, job) -> tuple[bool, str]:
+    def _review_job_auto_reject_checks(self, job: Job) -> tuple[bool, str]:
         """
         Run auto-reject checks for a job. Returns (failed, output) where failed is True if any check failed.
         The output is a string containing all output messages.
         """
         local_code_dir = job.user_code.local_dir
+        custom_function = job.custom_function
+        if custom_function is None:
+            raise ValueError(
+                f"Job {job.uid} does not have a custom function associated with it. Cannot run auto-reject checks."
+            )
+
+        input_filename = custom_function.input_params_filename
         output_lines = []
         failed = False
 
@@ -253,43 +260,35 @@ class RDSChatAnalysisClient(RDSClient):
             output_lines.append(":white_check_mark: Local code directory exists.")
 
         code_files = list(local_code_dir.iterdir())
-        if len(code_files) != 2:
+        if len(code_files) != 1:
             output_lines.append(
-                f":x: Expected 2 files in the code directory, found {len(code_files)}."
+                f":x: Expected 1 files in the code directory, found {len(code_files)}."
             )
             failed = True
         else:
             output_lines.append(
-                ":white_check_mark: Found 2 files in the code directory."
+                ":white_check_mark: Found 1 files in the code directory."
             )
 
-        if "job_config.json" not in [f.name for f in code_files]:
+        if input_filename not in [f.name for f in code_files]:
             output_lines.append(
-                ":x: job_config.json file is missing in the code directory."
+                f":x: {input_filename} file is missing in the code directory."
             )
             failed = True
         else:
-            output_lines.append(":white_check_mark: job_config.json found.")
-
-        if "main.py" not in [f.name for f in code_files]:
-            output_lines.append(":x: main.py file is missing in the code directory.")
-            failed = True
-        else:
-            output_lines.append(":white_check_mark: main.py found.")
-
-        code_str = (local_code_dir / "main.py").read_text()
-        from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
-
-        if not code_str.strip() == CHAT_ANALYSIS_CODE_TEMPLATE.strip():
-            output_lines.append(":x: Job contains custom or modified code.")
-            failed = True
-        else:
-            output_lines.append(":white_check_mark: main.py matches template.")
+            output_lines.append(f":white_check_mark: {input_filename} found.")
 
         return (failed, "\n".join(output_lines))
 
     def review_job(self, job: str | UUID | Job) -> None:
         job = self._get_job(job)
+        custom_function = job.custom_function
+        if custom_function is None:
+            rich.print(
+                f":x: Job {job.uid} does not have a custom function associated with it. Could not automatically review the job, please review all job files manually."
+            )
+            return
+
         if job.status != JobStatus.pending_code_review:
             rich.print(
                 f":x: Job {job.uid} is not in pending code review status. Current status: {job.status.name}."
@@ -299,10 +298,10 @@ class RDSChatAnalysisClient(RDSClient):
         auto_review_failed, auto_review_str = self._review_job_auto_reject_checks(job)
         local_code_dir = job.user_code.local_dir
 
-        job_config_path = local_code_dir / "job_config.json"
-        if job_config_path.exists():
-            rich.print(":mag: Job parameters:")
-            rich.print_json(json=job_config_path.read_text(), indent=2, highlight=False)
+        input_file = local_code_dir / custom_function.input_params_filename
+        if input_file.exists():
+            rich.print(":mag: Provided user parameters:")
+            rich.print_json(json=input_file.read_text(), indent=2, highlight=False)
 
         review_output_text = auto_review_str
         if auto_review_failed:

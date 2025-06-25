@@ -165,16 +165,6 @@ def setup_indices(
     )
 
 
-def get_full_log(db_conn: psycopg.Connection, log_id: str):
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            """SELECT * FROM log_embeddings WHERE metadata->>'log_id' = %s ORDER BY (metadata->>'message_idx')::int ASC;""",
-            (log_id,),
-        )
-        results = cursor.fetchall()
-    return results
-
-
 def connect_to_db(config: dict) -> psycopg.Connection:
     db_config = config["db"]
 

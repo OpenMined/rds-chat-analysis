@@ -4,14 +4,14 @@ from typing import Any, Dict, List
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 
+from rds_chat_analysis.queries import get_full_log_query, get_vector_store_query
 from rds_chat_analysis.recitation_filter import RecitationScorer
 from rds_chat_analysis.utils import (
     load_config,
     load_embedder_from_config,
     load_llm_from_config,
 )
-from rds_chat_analysis.vector_db import connect_to_db, get_full_log
-from rds_chat_analysis.vector_store_utils import build_vector_store_query
+from rds_chat_analysis.vector_db import connect_to_db
 
 PAIRWISE_QA_PROMPT = (
     "The following is a conversation between an AI assistant and a user:\n"
@@ -121,7 +121,7 @@ def execute_chat_log_analysis(
     embedder = load_embedder_from_config(config)
     llm = load_llm_from_config(config)
 
-    vector_store_query, query_params = build_vector_store_query(
+    vector_store_query, query_params = get_vector_store_query(
         query_embedding=embedder.embed_query(vector_store_query),
         table_name="log_embeddings",
         k=max_vector_store_results,
@@ -132,13 +132,13 @@ def execute_chat_log_analysis(
     with db_conn.cursor() as cursor:
         print(f"\nExecuting vector store query: {vector_store_query}")
         cursor.execute(vector_store_query, query_params)
-        llm_answers = cursor.fetchall()
+        vector_store_results = cursor.fetchall()
 
-        print(f"Found {len(llm_answers)} results.")
-        log_ids = set(result["metadata"]["log_id"] for result in llm_answers)
+        print(f"Found {len(vector_store_results)} results.")
+        log_ids = set(result["metadata"]["log_id"] for result in vector_store_results)
         full_logs = []
         for log_id in log_ids:
-            full_log = get_full_log(db_conn, log_id)
+            full_log = get_full_log_query(db_conn, log_id)
             full_logs.append(full_log)
         print(f"Fetched {len(full_logs)} full logs.")
 
