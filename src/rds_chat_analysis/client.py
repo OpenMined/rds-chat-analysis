@@ -1,5 +1,4 @@
 import json
-import tempfile
 from pathlib import Path
 from typing import Any, Self
 from uuid import UUID
@@ -9,12 +8,10 @@ from IPython.display import HTML, display
 from pydantic import BaseModel
 from syft_core import Client as SyftBoxClient
 from syft_event import SyftEvents
+from syft_notebook_ui.pydantic_html_repr import create_html_repr
 from syft_rds import init_session as _rds_init_session
 from syft_rds.client.rds_client import RDSClient
-from syft_rds.display_utils.html_format import create_html_repr
 from syft_rds.models import Job, JobStatus
-
-from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
 
 
 class JobOutput(BaseModel):
@@ -136,110 +133,19 @@ class RDSChatAnalysisClient(RDSClient):
     def from_rdsclient(cls, rds_client: RDSClient) -> Self:
         return cls(rds_client.config, rds_client.rpc, rds_client.local_store)
 
-    def _infer_dataset_name(self, dataset_name: str | None) -> str:
-        if dataset_name is not None:
-            return dataset_name
-
-        datasets = self.dataset.get_all()
-        if len(datasets) != 1:
-            raise ValueError(
-                "Multiple datasets found. Please specify the dataset_name explicitly."
-            )
-
-        return datasets[0].name
-
-    def submit_job(
-        self,
-        vector_store_query: str,
-        llm_query: str,
-        max_vector_store_results: int = 5,
-        distance_threshold: float = 0.5,
-        filters: dict | None = None,
-        dataset_name: str | None = None,
-    ) -> Job:
-        dataset_name = self._infer_dataset_name(dataset_name)
-        job_config = {
-            "vector_store_query": vector_store_query,
-            "llm_query": llm_query,
-            "max_vector_store_results": max_vector_store_results,
-            "distance_threshold": distance_threshold,
-            "filters": filters,
-        }
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            tmp_path = Path(temp_dir)
-            job_config_path = tmp_path / "job_config.json"
-            job_code_path = tmp_path / "main.py"
-
-            with open(job_config_path, "w") as f:
-                json.dump(job_config, f, indent=2)
-
-            with open(job_code_path, "w") as f:
-                f.write(CHAT_ANALYSIS_CODE_TEMPLATE)
-
-            job = self.job.submit(
-                user_code_path=temp_dir,
-                dataset_name=dataset_name,
-                entrypoint="main.py",
-                tags=["chat_analysis"],
-            )
-
-        return job
-
-    def _get_job(self, job: str | UUID | Job) -> Job:
-        if isinstance(job, str):
-            uid = UUID(job)
-        elif isinstance(job, UUID):
-            uid = job
-        elif isinstance(job, Job):
-            uid = job.uid
-        else:
-            raise ValueError("Invalid job identifier type. Must be str, UUID, or Job.")
-
-        return self.jobs.get(uid)
-
-    def get_job_config(self, job: str | UUID | Job) -> dict:
-        job = self._get_job(job)
-        config_file = job.user_code.local_dir / "job_config.json"
-        if not config_file.exists():
-            raise FileNotFoundError(
-                f"Config file {config_file} does not exist. Please contact the administrator."
-            )
-
-        with open(config_file, "r") as f:
-            config = json.load(f)
-        return config
-
-    def get_job_result(
-        self, job: str | UUID | Job, output_filename: str = "output/result.json"
-    ) -> JobOutput:
-        job = self._get_job(job)
-
-        if job.status != JobStatus.shared:
-            raise ValueError(
-                f"Job {job.uid} has no shared results yet. Current status: {job.status.name}."
-            )
-
-        return JobOutput(execution_output_dir=job.output_path, job=job)
-
-    def get_execution_result(self, job: str | UUID | Job) -> JobOutput:
-        job_output_folder: Path = (
-            self.config.runner_config.job_output_folder / job.uid.hex
-        )
-
-        if not job_output_folder.exists():
-            raise FileNotFoundError(
-                f"Output folder {job_output_folder} does not exist."
-            )
-
-        return JobOutput(execution_output_dir=job_output_folder, job=job)
-
-    def _review_job_auto_reject_checks(self, job) -> tuple[bool, str]:
+    def _review_job_auto_reject_checks(self, job: Job) -> tuple[bool, str]:
         """
         Run auto-reject checks for a job. Returns (failed, output) where failed is True if any check failed.
         The output is a string containing all output messages.
         """
         local_code_dir = job.user_code.local_dir
+        custom_function = job.custom_function
+        if custom_function is None:
+            raise ValueError(
+                f"Job {job.uid} does not have a custom function associated with it. Cannot run auto-reject checks."
+            )
+
+        input_filename = custom_function.input_params_filename
         output_lines = []
         failed = False
 
@@ -253,43 +159,52 @@ class RDSChatAnalysisClient(RDSClient):
             output_lines.append(":white_check_mark: Local code directory exists.")
 
         code_files = list(local_code_dir.iterdir())
-        if len(code_files) != 2:
+        if len(code_files) != 1:
             output_lines.append(
-                f":x: Expected 2 files in the code directory, found {len(code_files)}."
+                f":x: Expected 1 files in the code directory, found {len(code_files)}."
             )
             failed = True
         else:
             output_lines.append(
-                ":white_check_mark: Found 2 files in the code directory."
+                ":white_check_mark: Found 1 files in the code directory."
             )
 
-        if "job_config.json" not in [f.name for f in code_files]:
+        if input_filename not in [f.name for f in code_files]:
             output_lines.append(
-                ":x: job_config.json file is missing in the code directory."
+                f":x: {input_filename} file is missing in the code directory."
             )
             failed = True
         else:
-            output_lines.append(":white_check_mark: job_config.json found.")
-
-        if "main.py" not in [f.name for f in code_files]:
-            output_lines.append(":x: main.py file is missing in the code directory.")
-            failed = True
-        else:
-            output_lines.append(":white_check_mark: main.py found.")
-
-        code_str = (local_code_dir / "main.py").read_text()
-        from rds_chat_analysis.job_functions import CHAT_ANALYSIS_CODE_TEMPLATE
-
-        if not code_str.strip() == CHAT_ANALYSIS_CODE_TEMPLATE.strip():
-            output_lines.append(":x: Job contains custom or modified code.")
-            failed = True
-        else:
-            output_lines.append(":white_check_mark: main.py matches template.")
+            output_lines.append(f":white_check_mark: {input_filename} found.")
 
         return (failed, "\n".join(output_lines))
 
+    def _get_job(self, job: str | UUID | Job) -> Job:
+        """
+        Get a Job instance from a job identifier (string, UUID, or Job object).
+        Raises ValueError if the job cannot be found.
+        """
+        if isinstance(job, Job):
+            return job.refresh()
+        elif isinstance(job, str):
+            job = UUID(job)
+        elif not isinstance(job, UUID):
+            raise ValueError("Job must be a string, UUID, or Job instance.")
+
+        found_job = self.job.get(uid=job)
+        if found_job is None:
+            raise ValueError(f"Job with ID {job} not found.")
+        return found_job
+
     def review_job(self, job: str | UUID | Job) -> None:
         job = self._get_job(job)
+        custom_function = job.custom_function
+        if custom_function is None:
+            rich.print(
+                f":x: Job {job.uid} does not have a custom function associated with it. Could not automatically review the job, please review all job files manually."
+            )
+            return
+
         if job.status != JobStatus.pending_code_review:
             rich.print(
                 f":x: Job {job.uid} is not in pending code review status. Current status: {job.status.name}."
@@ -299,10 +214,10 @@ class RDSChatAnalysisClient(RDSClient):
         auto_review_failed, auto_review_str = self._review_job_auto_reject_checks(job)
         local_code_dir = job.user_code.local_dir
 
-        job_config_path = local_code_dir / "job_config.json"
-        if job_config_path.exists():
-            rich.print(":mag: Job parameters:")
-            rich.print_json(json=job_config_path.read_text(), indent=2, highlight=False)
+        input_file = local_code_dir / custom_function.input_params_filename
+        if input_file.exists():
+            rich.print(":mag: Provided user parameters:")
+            rich.print_json(json=input_file.read_text(), indent=2, highlight=False)
 
         review_output_text = auto_review_str
         if auto_review_failed:
