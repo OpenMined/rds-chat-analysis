@@ -8,7 +8,7 @@ def get_vector_store_query(
     k: int = 5,
     distance_threshold: float | None = None,
     filters: dict | None = None,
-) -> tuple[str, list]:
+) -> tuple[str, tuple]:
     query_embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
     params = [query_embedding_str]
 
@@ -41,7 +41,7 @@ def get_vector_store_query(
         LIMIT %s;
     """
     query = dedent(query).strip()
-    return query, params
+    return query, tuple(params)
 
 
 def get_full_log_query(log_id: str, table_name: str = "log_embeddings") -> str:
@@ -50,4 +50,4 @@ def get_full_log_query(log_id: str, table_name: str = "log_embeddings") -> str:
         WHERE metadata->>'log_id' = %s
         ORDER BY (metadata->>'message_idx')::int ASC;
     """
-    return dedent(query).strip(), [log_id]
+    return dedent(query).strip(), (log_id,)

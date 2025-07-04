@@ -138,7 +138,11 @@ def execute_chat_log_analysis(
         log_ids = set(result["metadata"]["log_id"] for result in vector_store_results)
         full_logs = []
         for log_id in log_ids:
-            full_log = get_full_log_query(db_conn, log_id)
+            full_log_query, params = get_full_log_query(
+                log_id, table_name="log_embeddings"
+            )
+            cursor.execute(full_log_query, params)
+            full_log = cursor.fetchall()
             full_logs.append(full_log)
         print(f"Fetched {len(full_logs)} full logs.")
 
