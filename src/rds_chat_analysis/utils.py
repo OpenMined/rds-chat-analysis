@@ -1,3 +1,10 @@
+"""
+rds-chat-analysis uses a TOML config file for all configuration related to the chat analysis pipeline.
+This module provides functions to load the configuration and initialize the LLM and embedder based on that configuration.
+
+See notebooks/v2/config_private.example.toml for an example configuration file.
+"""
+
 import tomllib
 from pathlib import Path
 

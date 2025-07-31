@@ -1,3 +1,13 @@
+"""
+This module provides utilities for embeddinga and storing chat logs in a PostgreSQL vector database.
+
+The intended pipeline has two main steps:
+1. Embedding chat logs into Parquet files.
+2. Loading these Parquet files into a PostgreSQL vector database.
+
+These steps are split so experimenting with different embedding models and database configurations is easier.
+"""
+
 import itertools
 import json
 from pathlib import Path

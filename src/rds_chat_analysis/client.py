@@ -129,6 +129,12 @@ def init_session(
 
 
 class RDSChatAnalysisClient(RDSClient):
+    """
+    RDSChatAnalysisClient is a thin wrapper around the RDSClient, to patch on the auto-review functionality for chat analysis jobs.
+
+    TODO move auto-review for custom functions to RDS, so we can review all custom functions automatically.
+    """
+
     @classmethod
     def from_rdsclient(cls, rds_client: RDSClient) -> Self:
         return cls(rds_client.config, rds_client.rpc, rds_client.local_store)

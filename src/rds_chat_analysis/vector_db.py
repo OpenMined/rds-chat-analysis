@@ -1,3 +1,7 @@
+"""
+This module implements a simple vector database on top of PostgreSQL with pgvector extension.
+"""
+
 import psycopg
 from psycopg.rows import dict_row
 
