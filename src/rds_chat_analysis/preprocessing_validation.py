@@ -1,3 +1,9 @@
+"""
+This module provides Pydantic validation for chat log preprocessing.
+
+See notebooks/v2/01-prepare-data.ipynb for example usage.
+"""
+
 from typing import Any, Dict, List, Self
 
 from pydantic import (
